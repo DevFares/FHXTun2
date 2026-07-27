@@ -71,8 +71,14 @@ class TrafficIdentifierServer:
                 return
 
             if session.state == "INIT":
+                if session.pending_payloads:
+                    payload = b"".join(session.pending_payloads) + payload
+                    session.pending_payloads.clear()
                 await self._process_initial_payload(session, payload)
             elif session.state == "SOCKS_GREETING":
+                if session.pending_payloads:
+                    payload = b"".join(session.pending_payloads) + payload
+                    session.pending_payloads.clear()
                 await self._process_socks_connect_request(session, payload)
             elif session.state == "CONNECTING":
                 logger.debug(f"[TIS] Session {session_id}: Buffering {len(payload)} bytes while connecting to target.")
