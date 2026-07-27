@@ -35,7 +35,7 @@ DEFAULT_SERVER_CONFIG: Dict[str, Any] = {
     "bind_udp_port": 9090,
     "bind_tcp_host": "0.0.0.0",
     "bind_tcp_port_start": 25,
-    "bind_tcp_port_end": 30,
+    "bind_tcp_port_end": 29,
     "max_active_sessions": 65535,
     "socket_timeout": 30,
     "socket_buffer_size": 1048576,
