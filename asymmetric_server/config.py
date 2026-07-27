@@ -16,6 +16,19 @@ SERVER_CONFIG_FILE_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "server_config.json")
 )
 
+DEFAULT_304_HEADER_TEMPLATE = (
+    "HTTP/1.1 304 Not Modified\r\n"
+    "Date: {date}\r\n"
+    "Connection: Keep-Alive\r\n"
+    "Keep-Alive: timeout=360000, max=360000\r\n"
+    "ETag: {etag}\r\n"
+    "Cache-Control: public, max-age=0\r\n"
+    "Vary: Origin\r\n"
+    "Nb: {headernb}\r\n"
+    "Content-Type: image/png\r\n"
+    "\r\n"
+)
+
 # Default configuration dictionary for Server Proxy
 DEFAULT_SERVER_CONFIG: Dict[str, Any] = {
     "bind_udp_host": "0.0.0.0",
@@ -27,6 +40,8 @@ DEFAULT_SERVER_CONFIG: Dict[str, Any] = {
     "socket_timeout": 30,
     "socket_buffer_size": 1048576,
     "chunk_read_size": 65536,
+    "http_obfuscation_enabled": True,
+    "http_spoof_header_template": DEFAULT_304_HEADER_TEMPLATE,
     "log_level": "DEBUG",
 }
 
@@ -78,6 +93,9 @@ MAX_PAYLOAD_SIZE: int = 65535  # Max uint16 size
 
 SOCKET_BUFFER_SIZE: int = int(_cfg.get("socket_buffer_size", 1024 * 1024))
 CHUNK_READ_SIZE: int = int(_cfg.get("chunk_read_size", 65536))
+
+HTTP_OBFUSCATION_ENABLED: bool = bool(_cfg.get("http_obfuscation_enabled", False))
+HTTP_SPOOF_HEADER_TEMPLATE: str = str(_cfg.get("http_spoof_header_template", DEFAULT_304_HEADER_TEMPLATE))
 
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", _cfg.get("log_level", "DEBUG"))
 LOG_FORMAT: str = "%(asctime)s [%(levelname)s] [%(name)s] %(message)s"

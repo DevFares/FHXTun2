@@ -233,6 +233,24 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
 
       <div class="card">
+        <div class="card-title">HTTP Response Obfuscation & Packet Spoofing (DPI Bypass)</div>
+        <div class="form-grid">
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: #fff;">
+              <input type="checkbox" id="http_obfuscation_enabled" name="http_obfuscation_enabled" {% if config.http_obfuscation_enabled %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--cyan);">
+              Enable HTTP Response Obfuscation (Wrap Return Data in HTTP 304 Spoofed Headers + Hex Payload)
+            </label>
+            <span class="help-text" style="margin-top: 4px;">When enabled, proxy return data is encapsulated inside a legitimate HTTP response header with hex-encoded payload to pass undetected through Deep Packet Inspection (DPI) and firewalls.</span>
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Spoofed HTTP Response Header Template</label>
+            <textarea id="http_spoof_header_template" name="http_spoof_header_template" rows="7" style="font-family: monospace; font-size: 13px; background: #0f172a; border: 1px solid var(--border); color: #38bdf8; padding: 10px; border-radius: 6px; width: 100%; outline: none;">{{ config.http_spoof_header_template }}</textarea>
+            <span class="help-text">Dynamic placeholders supported: <code>{date}</code>, <code>{etag}</code>, <code>{headernb}</code>. Headers must terminate with double CRLF (<code>\r\n\r\n</code>).</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-title">Performance Tuning & Logging</div>
         <div class="form-grid">
           <div class="form-group">
@@ -275,10 +293,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       formData.forEach((value, key) => {
         if (['local_port', 'remote_udp_port', 'mtcm_port_start', 'mtcm_port_end', 'max_mtcm_connections', 'socket_timeout', 'socket_buffer_size', 'chunk_read_size'].includes(key)) {
           data[key] = parseInt(value, 10);
+        } else if (key === 'http_obfuscation_enabled') {
+          data[key] = true;
         } else {
           data[key] = value;
         }
       });
+      if (!formData.has('http_obfuscation_enabled')) {
+        data['http_obfuscation_enabled'] = false;
+      }
 
       try {
         const res = await fetch('/api/config', {
@@ -316,6 +339,11 @@ def render_html_manual(config_dict, config_path):
     """Fallback template renderer for standard library HTTP server mode."""
     html = HTML_TEMPLATE
     html = html.replace("{{ config_path }}", config_path)
+
+    if config_dict.get("http_obfuscation_enabled"):
+        html = html.replace("{% if config.http_obfuscation_enabled %}checked{% endif %}", "checked")
+    else:
+        html = html.replace("{% if config.http_obfuscation_enabled %}checked{% endif %}", "")
     
     for key, val in config_dict.items():
         placeholder = "{{ config." + key + " }}"
