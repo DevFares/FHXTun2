@@ -15,7 +15,7 @@ logger = logging.getLogger("asymmetric_server.obfuscation")
 
 _headernb = 0
 
-DEFAULT_304_HEADER_TEMPLATE = (
+BACKUP_304_HEADER_TEMPLATE = (
     "HTTP/1.1 304 Not Modified\r\n"
     "Date: {date}\r\n"
     "Connection: Keep-Alive\r\n"
@@ -24,6 +24,17 @@ DEFAULT_304_HEADER_TEMPLATE = (
     "Cache-Control: public, max-age=0\r\n"
     "Vary: Origin\r\n"
     "Nb: {headernb}\r\n"
+    "Content-Type: image/png\r\n"
+    "\r\n"
+)
+
+DEFAULT_304_HEADER_TEMPLATE = (
+    "HTTP/1.1 304 Not Modified\r\n"
+    "Connection: Keep-Alive\r\n"
+    "Keep-Alive: timeout=360000, max=360000\r\n"
+    "ETag: {etag}\r\n"
+    "Cache-Control: public, max-age=0\r\n"
+    "Vary: Origin\r\n"
     "Content-Type: image/png\r\n"
     "\r\n"
 )
