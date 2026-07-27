@@ -290,6 +290,7 @@ class TrafficIdentifierServer:
                 chunk = await session.target_reader.read(config.CHUNK_READ_SIZE)
                 if not chunk:
                     logger.info(f"[TIS] Session {session_id}: Target remote server closed connection (EOF).")
+                    await self.tcp_sender.send_response_frame(session_id, b"", session.client_ip)
                     break
 
                 logger.debug(f"[TIS] Session {session_id}: Received {len(chunk)} bytes from target. Relaying via MTCMS...")
