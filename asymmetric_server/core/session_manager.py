@@ -23,10 +23,12 @@ class ServerSession:
     def __init__(self, session_id: int, client_ip: str) -> None:
         self.session_id = session_id
         self.client_ip = client_ip
-        self.state = "INIT"  # States: INIT, SOCKS_GREETING, CONNECTED, CLOSED
+        self.state = "INIT"  # States: INIT, SOCKS_GREETING, CONNECTING, CONNECTED, CLOSED
         self.target_reader: Optional[asyncio.StreamReader] = None
         self.target_writer: Optional[asyncio.StreamWriter] = None
         self.read_task: Optional[asyncio.Task] = None
+        self.pending_payloads: List[bytes] = []
+        self.lock = asyncio.Lock()
 
 
 class TrafficIdentifierServer:
@@ -63,15 +65,22 @@ class TrafficIdentifierServer:
                 self.sessions[session_id] = session
                 logger.info(f"[TIS] Session {session_id}: Created new server session for Client Proxy IP {client_ip}")
 
-        # State machine processing
-        if session.state == "INIT":
-            await self._process_initial_payload(session, payload)
-        elif session.state == "SOCKS_GREETING":
-            await self._process_socks_connect_request(session, payload)
-        elif session.state == "CONNECTED":
-            await self._forward_to_target(session, payload)
-        else:
-            logger.warning(f"[TIS] Session {session_id}: Payload received in invalid state '{session.state}'. Dropping.")
+        # Per-session locking to prevent race conditions during state transitions & open_connection
+        async with session.lock:
+            if session.state == "CLOSED":
+                return
+
+            if session.state == "INIT":
+                await self._process_initial_payload(session, payload)
+            elif session.state == "SOCKS_GREETING":
+                await self._process_socks_connect_request(session, payload)
+            elif session.state == "CONNECTING":
+                logger.debug(f"[TIS] Session {session_id}: Buffering {len(payload)} bytes while connecting to target.")
+                session.pending_payloads.append(payload)
+            elif session.state == "CONNECTED":
+                await self._forward_to_target(session, payload)
+            else:
+                logger.warning(f"[TIS] Session {session_id}: Payload received in invalid state '{session.state}'. Dropping.")
 
     async def _process_initial_payload(self, session: ServerSession, payload: bytes) -> None:
         """
@@ -139,6 +148,7 @@ class TrafficIdentifierServer:
             await self.close_session(session.session_id)
             return
 
+        session.state = "CONNECTING"
         try:
             logger.info(f"[TIS] Session {session.session_id}: HTTP CONNECT tunnel to target {target_host}:{target_port}")
             reader, writer = await asyncio.wait_for(
@@ -162,6 +172,13 @@ class TrafficIdentifierServer:
 
             # Spawn target reader loop task
             session.read_task = asyncio.create_task(self._target_reader_loop(session))
+
+            # Flush buffered payloads
+            if session.pending_payloads:
+                logger.debug(f"[TIS] Session {session.session_id}: Flushing {len(session.pending_payloads)} buffered payloads to target.")
+                for pending in session.pending_payloads:
+                    await self._forward_to_target(session, pending)
+                session.pending_payloads.clear()
 
         except Exception as err:
             logger.error(f"[TIS] Session {session.session_id}: Failed to establish HTTP CONNECT to {target_host}:{target_port}: {err}")
@@ -202,6 +219,7 @@ class TrafficIdentifierServer:
 
             logger.info(f"[TIS] Session {session.session_id}: SOCKS5 CONNECT request to target {target_host}:{target_port}")
 
+            session.state = "CONNECTING"
             # Connect to target destination
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(target_host, target_port),
@@ -228,6 +246,13 @@ class TrafficIdentifierServer:
             # Spawn target reader loop task
             session.read_task = asyncio.create_task(self._target_reader_loop(session))
 
+            # Flush buffered payloads
+            if session.pending_payloads:
+                logger.debug(f"[TIS] Session {session.session_id}: Flushing {len(session.pending_payloads)} buffered payloads to target.")
+                for pending in session.pending_payloads:
+                    await self._forward_to_target(session, pending)
+                session.pending_payloads.clear()
+
         except Exception as err:
             logger.error(f"[TIS] Session {session.session_id}: Failed to connect to target {target_host}:{target_port}: {err}")
             # Reply SOCKS5 failure (0x01 General SOCKS server failure)
@@ -252,6 +277,7 @@ class TrafficIdentifierServer:
                     target_port = int(parts[1])
                 break
 
+        session.state = "CONNECTING"
         try:
             logger.info(f"[TIS] Session {session.session_id}: Direct target connect to {target_host}:{target_port}")
             reader, writer = await asyncio.wait_for(
@@ -264,6 +290,12 @@ class TrafficIdentifierServer:
 
             session.read_task = asyncio.create_task(self._target_reader_loop(session))
             await self._forward_to_target(session, payload)
+
+            if session.pending_payloads:
+                logger.debug(f"[TIS] Session {session.session_id}: Flushing {len(session.pending_payloads)} buffered payloads to target.")
+                for pending in session.pending_payloads:
+                    await self._forward_to_target(session, pending)
+                session.pending_payloads.clear()
 
         except Exception as err:
             logger.error(f"[TIS] Session {session.session_id}: Direct connect failed: {err}")
@@ -312,17 +344,19 @@ class TrafficIdentifierServer:
             session = self.sessions.pop(session_id, None)
 
         if session:
-            session.state = "CLOSED"
-            if session.read_task and not session.read_task.done():
-                session.read_task.cancel()
+            async with session.lock:
+                session.state = "CLOSED"
+                session.pending_payloads.clear()
+                if session.read_task and not session.read_task.done():
+                    session.read_task.cancel()
 
-            if session.target_writer:
-                try:
-                    if not session.target_writer.is_closing():
-                        session.target_writer.close()
-                        await session.target_writer.wait_closed()
-                except Exception:
-                    pass
+                if session.target_writer:
+                    try:
+                        if not session.target_writer.is_closing():
+                            session.target_writer.close()
+                            await session.target_writer.wait_closed()
+                    except Exception:
+                        pass
 
             logger.info(f"[TIS] Session {session_id}: Cleanly closed & removed from TIS session table.")
 
