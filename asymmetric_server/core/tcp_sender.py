@@ -167,35 +167,36 @@ class MultiTCPConnectionManagerServer:
                     candidates = matching
 
             num_candidates = len(candidates)
-            start_idx = self._round_robin_idx
-            self._round_robin_idx = (self._round_robin_idx + 1) % max(1, num_candidates)
+            start_idx = session_id % num_candidates
+            conn_list = list(candidates)
 
-            # Try round-robin send across candidate accepted connections
-            for i in range(num_candidates):
-                conn = candidates[(start_idx + i) % num_candidates]
-                writer: asyncio.StreamWriter = conn["writer"]
-                if writer.is_closing():
-                    continue
+        # Try pinned connection first, then fallbacks if closed
+        for i in range(len(conn_list)):
+            conn = conn_list[(start_idx + i) % len(conn_list)]
+            writer: asyncio.StreamWriter = conn["writer"]
+            if writer.is_closing():
+                continue
 
-                try:
-                    writer.write(frame)
-                    await writer.drain()
+            try:
+                writer.write(frame)
+                await writer.drain()
 
+                async with self._lock:
                     self._bytes_sent += len(payload)
                     self._packets_sent += 1
 
-                    logger.debug(
-                        f"[MTCMS] Session {session_id}: Transmitted TCP response frame "
-                        f"({len(payload)} bytes) over accepted connection to {conn['ip']}:{conn['port']}"
-                    )
-                    return True
-                except (ConnectionResetError, BrokenPipeError, OSError) as err:
-                    logger.warning(f"[MTCMS] Connection write error to {conn['ip']}:{conn['port']}: {err}")
+                logger.debug(
+                    f"[MTCMS] Session {session_id}: Transmitted TCP response frame "
+                    f"({len(payload)} bytes) over accepted connection to {conn['ip']}:{conn['port']}"
+                )
+                return True
+            except (ConnectionResetError, BrokenPipeError, OSError) as err:
+                logger.warning(f"[MTCMS] Connection write error to {conn['ip']}:{conn['port']}: {err}")
 
-            logger.error(
-                f"[MTCMS] Session {session_id}: Failed to deliver TCP return frame across all active client sockets."
-            )
-            return False
+        logger.error(
+            f"[MTCMS] Session {session_id}: Failed to deliver TCP return frame across all active client sockets."
+        )
+        return False
 
     async def close(self) -> None:
         """
