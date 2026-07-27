@@ -84,10 +84,90 @@ class TrafficIdentifierServer:
             # Response: SOCKS Version 5, Method 0x00 (NO AUTH REQUIRED)
             response = b"\x05\x00"
             await self.tcp_sender.send_response_frame(session.session_id, response, session.client_ip)
+        elif payload.upper().startswith(b"CONNECT "):
+            logger.debug(f"[TIS] Session {session.session_id}: HTTP CONNECT request received ({len(payload)} bytes). Handling HTTP proxy tunnel...")
+            await self._process_http_connect_request(session, payload)
         else:
             # Fallback: Raw target / HTTP transparent proxy parsing
             logger.debug(f"[TIS] Session {session.session_id}: Non-SOCKS5 payload received ({len(payload)} bytes). Attempting direct target connection...")
             await self._process_direct_target_connection(session, payload)
+
+    async def _process_http_connect_request(self, session: ServerSession, payload: bytes) -> None:
+        """
+        Parses HTTP CONNECT request (used for HTTPS tunneling) and establishes target connection.
+        """
+        lines = payload.split(b"\r\n")
+        first_line = lines[0].decode("utf-8", errors="ignore").strip()
+        parts = first_line.split()
+
+        target_host = ""
+        target_port = 443
+
+        if len(parts) >= 2:
+            host_port = parts[1]
+            if "://" in host_port:
+                host_port = host_port.split("://", 1)[1]
+            if ":" in host_port:
+                hp_parts = host_port.rsplit(":", 1)
+                target_host = hp_parts[0]
+                try:
+                    target_port = int(hp_parts[1])
+                except ValueError:
+                    target_port = 443
+            else:
+                target_host = host_port
+
+        if not target_host:
+            for line in lines[1:]:
+                if line.lower().startswith(b"host:"):
+                    hp = line.split(b":", 1)[1].strip().decode("utf-8", errors="ignore")
+                    if ":" in hp:
+                        hp_parts = hp.rsplit(":", 1)
+                        target_host = hp_parts[0]
+                        try:
+                            target_port = int(hp_parts[1])
+                        except ValueError:
+                            target_port = 443
+                    else:
+                        target_host = hp
+                    break
+
+        if not target_host:
+            logger.error(f"[TIS] Session {session.session_id}: Unable to parse target host from HTTP CONNECT request.")
+            response = b"HTTP/1.1 400 Bad Request\r\n\r\n"
+            await self.tcp_sender.send_response_frame(session.session_id, response, session.client_ip)
+            await self.close_session(session.session_id)
+            return
+
+        try:
+            logger.info(f"[TIS] Session {session.session_id}: HTTP CONNECT tunnel to target {target_host}:{target_port}")
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(target_host, target_port),
+                timeout=config.SOCKET_TIMEOUT
+            )
+            session.target_reader = reader
+            session.target_writer = writer
+            session.state = "CONNECTED"
+
+            sock = writer.get_extra_info("socket")
+            if sock:
+                try:
+                    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                except Exception:
+                    pass
+
+            # Send HTTP 200 Connection Established back to client proxy
+            response = b"HTTP/1.1 200 Connection Established\r\n\r\n"
+            await self.tcp_sender.send_response_frame(session.session_id, response, session.client_ip)
+
+            # Spawn target reader loop task
+            session.read_task = asyncio.create_task(self._target_reader_loop(session))
+
+        except Exception as err:
+            logger.error(f"[TIS] Session {session.session_id}: Failed to establish HTTP CONNECT to {target_host}:{target_port}: {err}")
+            response = b"HTTP/1.1 502 Bad Gateway\r\n\r\n"
+            await self.tcp_sender.send_response_frame(session.session_id, response, session.client_ip)
+            await self.close_session(session.session_id)
 
     async def _process_socks_connect_request(self, session: ServerSession, payload: bytes) -> None:
         """
