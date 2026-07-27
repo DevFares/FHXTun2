@@ -32,7 +32,7 @@ DEFAULT_304_HEADER_TEMPLATE = (
 # Default configuration dictionary for Server Proxy
 DEFAULT_SERVER_CONFIG: Dict[str, Any] = {
     "bind_udp_host": "0.0.0.0",
-    "bind_udp_port": 9090,
+    "bind_udp_port": 30,
     "bind_tcp_host": "0.0.0.0",
     "bind_tcp_port_start": 25,
     "bind_tcp_port_end": 29,
