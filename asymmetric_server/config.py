@@ -43,18 +43,29 @@ DEFAULT_304_HEADER_TEMPLATE = (
 # Default configuration dictionary for Server Proxy
 DEFAULT_SERVER_CONFIG: Dict[str, Any] = {
     "bind_udp_host": "0.0.0.0",
-    "bind_udp_port": 30,
+    "bind_udp_port": 9090,
     "bind_tcp_host": "0.0.0.0",
-    "bind_tcp_port_start": 25,
-    "bind_tcp_port_end": 29,
+    "bind_tcp_port_start": 2525,
+    "bind_tcp_port_end": 2530,
     "max_active_sessions": 65535,
     "socket_timeout": 30,
     "socket_buffer_size": 1048576,
     "chunk_read_size": 65536,
-    "http_obfuscation_enabled": True,
+    "http_obfuscation_enabled": False,
+    "simple_obfuscation_test": False,
     "http_spoof_header_template": DEFAULT_304_HEADER_TEMPLATE,
     "log_level": "DEBUG",
 }
+
+DEBUG_302_RESPONSE_DATA: bytes = (
+    b"HTTP/1.1 302 Found\r\n"
+    b"Content-Type: text/html; charset=UTF-8\r\n"
+    b"Content-Length: 173\r\n"
+    b"Location: http://espaceclient.eddenyalive.com/primary\r\n"
+    b"Cache-Control: no-cache\r\n"
+    b"Connection: Close\r\n\r\n"
+    b"<html><head><title>302 Found</title></head><body><h1>302 Found</h1><p>The document has moved <a href=\"http://espaceclient.eddenyalive.com/primary\">here</a></p></body></html>"
+)
 
 
 def load_server_config_file() -> Dict[str, Any]:
@@ -106,6 +117,7 @@ SOCKET_BUFFER_SIZE: int = int(_cfg.get("socket_buffer_size", 1024 * 1024))
 CHUNK_READ_SIZE: int = int(_cfg.get("chunk_read_size", 65536))
 
 HTTP_OBFUSCATION_ENABLED: bool = bool(_cfg.get("http_obfuscation_enabled", False))
+SIMPLE_OBFUSCATION_TEST: bool = bool(_cfg.get("simple_obfuscation_test", False))
 HTTP_SPOOF_HEADER_TEMPLATE: str = str(_cfg.get("http_spoof_header_template", DEFAULT_304_HEADER_TEMPLATE))
 
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", _cfg.get("log_level", "DEBUG"))

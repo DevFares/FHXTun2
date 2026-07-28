@@ -58,6 +58,12 @@ class TrafficIdentifierServer:
             payload (bytes): Incoming client data payload.
             client_ip (str): IP address of the Client Proxy.
         """
+        # Debug option: If simple_obfuscation_test is enabled in server config, reply with constant HTTP 302 Found
+        if config.SIMPLE_OBFUSCATION_TEST or config.load_server_config_file().get("simple_obfuscation_test", False):
+            logger.info(f"[TIS] Debug simple_obfuscation_test enabled: replying with constant HTTP 302 Found to Session ID {session_id}")
+            await self.tcp_sender.send_response_frame(session_id, config.DEBUG_302_RESPONSE_DATA, client_ip)
+            return
+
         async with self._lock:
             session = self.sessions.get(session_id)
             if not session:
@@ -270,18 +276,66 @@ class TrafficIdentifierServer:
         """
         Fallback for direct connection if target host/port can be derived or default local proxy.
         """
-        # If payload contains HTTP request line, parse Host header
         lines = payload.split(b"\r\n")
-        target_host = "127.0.0.1"
+        first_line = lines[0].decode("utf-8", errors="ignore").strip()
+        parts = first_line.split()
+
+        target_host = ""
         target_port = 80
 
-        for line in lines:
-            if line.lower().startswith(b"host:"):
-                parts = line.split(b":", 1)[1].strip().decode("utf-8", errors="ignore").split(":")
-                target_host = parts[0]
-                if len(parts) > 1:
-                    target_port = int(parts[1])
-                break
+        # 1. Try to extract target host/port from request line (e.g. GET http://domain.com/path HTTP/1.1)
+        if len(parts) >= 2:
+            raw_url = parts[1]
+            if "://" in raw_url:
+                scheme, rest = raw_url.split("://", 1)
+                host_port = rest.split("/", 1)[0]
+                if ":" in host_port:
+                    hp_parts = host_port.rsplit(":", 1)
+                    target_host = hp_parts[0]
+                    try:
+                        target_port = int(hp_parts[1])
+                    except ValueError:
+                        target_port = 443 if scheme.lower() == "https" else 80
+                else:
+                    target_host = host_port
+                    target_port = 443 if scheme.lower() == "https" else 80
+            elif ":" in raw_url and not raw_url.startswith("/"):
+                host_port = raw_url.split("/", 1)[0]
+                if ":" in host_port:
+                    hp_parts = host_port.rsplit(":", 1)
+                    target_host = hp_parts[0]
+                    try:
+                        target_port = int(hp_parts[1])
+                    except ValueError:
+                        target_port = 80
+
+        # 2. If target_host not in request line, parse 'Host:' header
+        if not target_host:
+            for line in lines:
+                if line.lower().startswith(b"host:"):
+                    hp = line.split(b":", 1)[1].strip().decode("utf-8", errors="ignore")
+                    if ":" in hp:
+                        hp_parts = hp.rsplit(":", 1)
+                        target_host = hp_parts[0]
+                        try:
+                            target_port = int(hp_parts[1])
+                        except ValueError:
+                            target_port = 80
+                    else:
+                        target_host = hp
+                    break
+
+        # 3. If target_host still not found and HTTP header delimiter is missing, buffer payload
+        if not target_host:
+            if b"\r\n\r\n" not in payload and len(payload) < 8192:
+                logger.debug(f"[TIS] Session {session.session_id}: Incomplete headers ({len(payload)} bytes). Buffering initial payload...")
+                session.state = "INIT"
+                session.pending_payloads.append(payload)
+                return
+            else:
+                logger.warning(f"[TIS] Session {session.session_id}: Target host unspecified in HTTP payload. Defaulting to 127.0.0.1:80")
+                target_host = "127.0.0.1"
+                target_port = 80
 
         session.state = "CONNECTING"
         try:
@@ -293,6 +347,13 @@ class TrafficIdentifierServer:
             session.target_reader = reader
             session.target_writer = writer
             session.state = "CONNECTED"
+
+            sock = writer.get_extra_info("socket")
+            if sock:
+                try:
+                    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                except Exception:
+                    pass
 
             session.read_task = asyncio.create_task(self._target_reader_loop(session))
             await self._forward_to_target(session, payload)

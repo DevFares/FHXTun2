@@ -1,7 +1,7 @@
 {
   "local_host": "127.0.0.1",
   "local_port": 1080,
-  "remote_proxy_host": "45.147.250.89",
+  "remote_proxy_host": "113.30.150.137",
   "remote_udp_port": 30,
   "mtcm_port_start": 25,
   "mtcm_port_end": 29,
@@ -11,5 +11,7 @@
   "chunk_read_size": 65536,
   "http_obfuscation_enabled": true,
   "http_spoof_header_template": "HTTP/1.1 304 Not Modified\nDate: {date}\nConnection: Keep-Alive\nKeep-Alive: timeout=360000, max=360000\nETag: {etag}\nCache-Control: public, max-age=0\nVary: Origin\nNb: {headernb}\nContent-Type: image/png\n\n",
+  "write_received_packets_full": true,
+  "write_received_packets_data": true,
   "log_level": "DEBUG"
 }
