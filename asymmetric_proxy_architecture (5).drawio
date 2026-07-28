@@ -1,0 +1,220 @@
+<mxfile host="app.diagrams.net" modified="2026-07-27T09:10:00.000Z" agent="AI Studio Agent" version="21.0.0" type="device">
+  <diagram id="asymmetric-proxy-arch-corrected" name="Asymmetric Proxy Architecture">
+    <mxGraphModel dx="2400" dy="1800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- HEADER TITLE BOX -->
+        <mxCell id="title_box" value="&lt;b&gt;ASYMMETRIC PYTHON PROXY SYSTEM - ARCHITECTURE &amp;amp; DATA FLOW&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#38bdf8&quot;&gt;Outbound Requests: UDP Datagrams (Port 9090) | Inbound Responses: Server MTCMS Client TCP Return Target Channels (Ports 2525 - 2530)&lt;/font&gt;" style="shape=mxgraph.bootstrap.rrect;rSize=12;fillColor=#0f172a;strokeColor=#3b82f6;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=16;align=center;verticalAlign=middle;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="2240" height="70" as="geometry" />
+        </mxCell>
+
+
+        <!-- ========================================================================================= -->
+        <!-- SWIMLANE 1: CLIENT PROXY SYSTEM -->
+        <!-- ========================================================================================= -->
+        <mxCell id="swimlane_client" value="CLIENT PROXY SYSTEM (Local Machine / User PC)" style="swimlane;startSize=35;fillColor=#0284c7;fillOpacity=0.06;fontColor=#0284c7;fontStyle=1;strokeColor=#0284c7;strokeWidth=2;fontSize=15;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="110" width="680" height="1600" as="geometry" />
+        </mxCell>
+
+        <!-- Local Application / Browser -->
+        <mxCell id="c_app" value="&lt;b&gt;Local Application / Browser&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94a3b8&quot;&gt;Windows System Proxy Mode (&lt;b&gt;scripts/toggle_proxy.bat 1&lt;/b&gt;)&lt;br&gt;Routes Chrome, Firefox, Curl, OS Sockets to 127.0.0.1:1080&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#64748b;strokeWidth=2;fontColor=#f8fafc;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="160" width="520" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- TCMC -->
+        <mxCell id="c_tcmc" value="&lt;b&gt;TCPConnectionManagerClient (TCMC)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#38bdf8&quot;&gt;Local Ingress Proxy Listener (asymmetric_proxy/core/tcp_client.py)&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cbd5e1&quot;&gt;• Binds: 127.0.0.1:1080 | TCP_NODELAY Enabled&lt;br&gt;• Accepts local application connections &amp;amp; registers session with TIF&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0369a1;strokeColor=#38bdf8;strokeWidth=2;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="360" width="520" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- TIF -->
+        <mxCell id="c_tif" value="&lt;b&gt;TrafficIdentifierFunction (TIF)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#f59e0b&quot;&gt;Session State Manager &amp;amp; Mapping Table (asymmetric_proxy/core/session_manager.py)&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cbd5e1&quot;&gt;• Thread/Async-safe dictionary mapping Session ID (1 to 65535) &amp;lt;--&amp;gt; asyncio.StreamWriter&lt;br&gt;• Allocates unique IDs &amp;amp; dispatches returning TCP payloads back to local client socket&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#78350f;strokeColor=#f59e0b;strokeWidth=2;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="570" width="520" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- UCMC -->
+        <mxCell id="c_ucmc" value="&lt;b&gt;UDPConnectionManagerClient (UCMC)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#fbbf24&quot;&gt;Outbound UDP Request Encapsulator (asymmetric_proxy/core/udp_sender.py)&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cbd5e1&quot;&gt;• Encapsulates client request data in [2B Session ID][2B Length][Payload]&lt;br&gt;• Sends UDP datagrams to Remote Proxy Server: UDP Port 9090&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b45309;strokeColor=#fbbf24;strokeWidth=2;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="780" width="520" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- MTCM -->
+        <mxCell id="c_mtcm" value="&lt;b&gt;MultiTCPConnectionManager (MTCM)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#34d399&quot;&gt;Client MultiTCP Connection Pool (asymmetric_proxy/core/tcp_receiver.py)&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cbd5e1&quot;&gt;• Connects persistent TCP return channels to Server MTCMS listening ports (2525 - 2530)&lt;br&gt;• Receives binary response frames &amp;amp; queries TIF to route data to client socket&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#065f46;strokeColor=#34d399;strokeWidth=2;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="990" width="520" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Web Config UI & Dashboard -->
+        <mxCell id="c_web" value="&lt;b&gt;Client Web Config Dashboard &amp;amp; REST Server (web_config_server.py)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#818cf8&quot;&gt;Flask API &amp;amp; Live Web Dashboard UI (127.0.0.1:5000) for modifying client config.json&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1b4b;strokeColor=#818cf8;strokeWidth=2;fontColor=#f8fafc;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="1190" width="520" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Client Info Details -->
+        <mxCell id="c_info" value="&lt;b&gt;CLIENT PROXY HIGHLIGHTS &amp;amp; CONTROLS&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94a3b8&quot;&gt;• &lt;b&gt;scripts/toggle_proxy.bat&lt;/b&gt;: Run '1' to ENABLE Windows Proxy, '0' to DISABLE.&lt;br&gt;• &lt;b&gt;scripts/run.bat / scripts/run.sh&lt;/b&gt;: Launches Client Proxy system.&lt;br&gt;• &lt;b&gt;config.json&lt;/b&gt;: Defines local host, remote server IP, server UDP port, MTCM return ports.&lt;br&gt;• &lt;b&gt;High-Speed Socket Tuning&lt;/b&gt;: 1MB SO_RCVBUF / SO_SNDBUF buffers.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;strokeWidth=1.5;fontColor=#e2e8f0;fontSize=11;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="120" y="1310" width="520" height="140" as="geometry" />
+        </mxCell>
+
+
+        <!-- ========================================================================================= -->
+        <!-- SWIMLANE 2: RESTRICTED NETWORK / FIREWALL BOUNDARY -->
+        <!-- ========================================================================================= -->
+        <mxCell id="swimlane_net" value="RESTRICTED NETWORK / FIREWALL BOUNDARY" style="swimlane;startSize=35;fillColor=#dc2626;fillOpacity=0.06;fontColor=#ef4444;fontStyle=1;strokeColor=#dc2626;strokeWidth=2;fontSize=15;html=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="110" width="700" height="1600" as="geometry" />
+        </mxCell>
+
+        <!-- Binary Frame Specification Box -->
+        <mxCell id="net_frame_spec" value="&lt;b&gt;CUSTOM BINARY PROTOCOL FRAME FORMAT (asymmetric_proxy/utils/protocol.py)&lt;/b&gt;&lt;br&gt;&lt;br&gt;• &lt;b&gt;Session ID&lt;/b&gt;: 2 Bytes Big-Endian uint16 (!H)&lt;br&gt;• &lt;b&gt;Payload Length&lt;/b&gt;: 2 Bytes Big-Endian uint16 (!H)&lt;br&gt;• &lt;b&gt;Payload Data&lt;/b&gt;: N Bytes (Max 65,535 Bytes per frame)&lt;br&gt;&lt;font color=&quot;#38bdf8&quot;&gt;Total Header Size: 4 Bytes&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#38bdf8;strokeWidth=2;fontColor=#cbd5e1;fontSize=12;align=left;spacingLeft=15;" vertex="1" parent="1">
+          <mxGeometry x="830" y="160" width="600" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Network Asymmetric Logic Explanation -->
+        <mxCell id="net_asym_logic" value="&lt;b&gt;CORRECTED ASYMMETRIC BINDING &amp;amp; STREAMING LOGIC&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94a3b8&quot;&gt;• &lt;b&gt;Outbound Requests&lt;/b&gt;: Client UCMC sends UDP datagrams to Server UCMS UDP Port 9090.&lt;br&gt;• &lt;b&gt;Inbound Return Channels&lt;/b&gt;: Server MTCMS (Client TCP Return Target Channel) BINDS and LISTENS on TCP Ports (2525 - 2530).&lt;br&gt;• &lt;b&gt;Client Active Connection&lt;/b&gt;: Client MTCM connects to Server MTCMS TCP Ports (2525-2530) to establish return sockets.&lt;br&gt;• &lt;b&gt;Server Route-Only Traffic&lt;/b&gt;: Server accepts incoming client TCP connections and routes internet return traffic through them.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1b4b;strokeColor=#818cf8;strokeWidth=1.5;fontColor=#e2e8f0;fontSize=11;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="830" y="310" width="600" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Outbound UDP Channel Box -->
+        <mxCell id="net_udp" value="&lt;b&gt;OUTBOUND REQUEST PATH (UDP Port 9090)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#f59e0b&quot;&gt;UCMC --&amp;gt; Outbound UDP Datagram Frames --&amp;gt; UCMS (Server Port 9090)&lt;/font&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#451a03;strokeColor=#f59e0b;strokeWidth=2;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="830" y="780" width="600" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Inbound TCP Channel Box -->
+        <mxCell id="net_tcp" value="&lt;b&gt;INBOUND RETURN TCP CHANNEL POOL (Ports 2525 - 2530)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#10b981&quot;&gt;Client MTCM -- Connected TCP Stream --&amp;gt; Server MTCMS Return Target Listener (2525-2530)&lt;/font&gt;" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#064e3b;strokeColor=#10b981;strokeWidth=2;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="830" y="990" width="600" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Reconnect & Resilience Detail -->
+        <mxCell id="net_reconnect" value="&lt;b&gt;SOCKET RESILIENCE &amp;amp; PERFORMANCE OPTIMIZATIONS&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94a3b8&quot;&gt;• &lt;b&gt;Zero-Copy Memory Slicing&lt;/b&gt;: Efficient binary header unpacking without memory copy overhead.&lt;br&gt;• &lt;b&gt;TCP_NODELAY Enabled&lt;/b&gt;: Disables Nagle's algorithm on all return sockets for real-time packet delivery.&lt;br&gt;• &lt;b&gt;Expanded Socket Buffers&lt;/b&gt;: Sets SO_RCVBUF / SO_SNDBUF to 1MB (1,048,576 Bytes) for high bandwidth.&lt;br&gt;• &lt;b&gt;Auto TCP Channel Reconnect&lt;/b&gt;: Client MTCM continuously monitors and re-establishes closed return TCP streams.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#10b981;strokeWidth=1.5;fontColor=#e2e8f0;fontSize=11;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="830" y="1140" width="600" height="150" as="geometry" />
+        </mxCell>
+
+
+        <!-- ========================================================================================= -->
+        <!-- SWIMLANE 3: SERVER PROXY SYSTEM -->
+        <!-- ========================================================================================= -->
+        <mxCell id="swimlane_server" value="REMOTE PROXY SERVER SYSTEM (Remote Host / Server)" style="swimlane;startSize=35;fillColor=#9333ea;fillOpacity=0.06;fontColor=#a855f7;fontStyle=1;strokeColor=#9333ea;strokeWidth=2;fontSize=15;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1540" y="110" width="680" height="1600" as="geometry" />
+        </mxCell>
+
+        <!-- Target Destination Internet -->
+        <mxCell id="s_target" value="&lt;b&gt;Target Destination Internet Servers&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94a3b8&quot;&gt;External Websites, Web Services, APIs, External Servers (HTTP / HTTPS / Custom TCP)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#64748b;strokeWidth=2;fontColor=#f8fafc;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="160" width="540" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- TIS -->
+        <mxCell id="s_tis" value="&lt;b&gt;TrafficIdentifierServer (TIS)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#c084fc&quot;&gt;Server Session &amp;amp; SOCKS5 Protocol Handler (asymmetric_server/core/session_manager.py)&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cbd5e1&quot;&gt;• Parses SOCKS5 Greetings (&lt;b&gt;0x05 0x01 0x00&lt;/b&gt;) &amp;amp; CONNECT Requests (&lt;b&gt;IPv4 / Domain / IPv6&lt;/b&gt;)&lt;br&gt;• Opens outbound TCP socket to target destination server &amp;amp; streams response back to MTCMS&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#581c87;strokeColor=#c084fc;strokeWidth=2;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="360" width="540" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- UCMS -->
+        <mxCell id="s_ucms" value="&lt;b&gt;UDPConnectionManagerServer (UCMS)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#fbbf24&quot;&gt;Inbound UDP Datagram Receiver (asymmetric_server/core/udp_receiver.py)&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cbd5e1&quot;&gt;• Binds: 0.0.0.0:9090 | Asyncio Datagram Protocol Loop&lt;br&gt;• Unpacks custom binary frame header &amp;amp; dispatches payload to TIS&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#78350f;strokeColor=#fbbf24;strokeWidth=2;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="780" width="540" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- MTCMS -->
+        <mxCell id="s_mtcms" value="&lt;b&gt;MultiTCPConnectionManagerServer (MTCMS)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#34d399&quot;&gt;Client TCP Return Target Channel (asymmetric_server/core/tcp_sender.py)&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#cbd5e1&quot;&gt;• Binds and listens on TCP port range (e.g. 0.0.0.0:2525 - 2530)&lt;br&gt;• Accepts client return connection demands &amp;amp; routes binary response frames across active sockets&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#065f46;strokeColor=#34d399;strokeWidth=2;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="990" width="540" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Server SOCKS5 Workflow Box -->
+        <mxCell id="s_workflow" value="&lt;b&gt;SERVER-SIDE SOCKS5 HANDSHAKE &amp;amp; PROXY WORKFLOW&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94a3b8&quot;&gt;1. Client sends SOCKS5 Greeting (&lt;b&gt;0x05 0x01 0x00&lt;/b&gt;) over UDP --&amp;gt; UCMS --&amp;gt; TIS.&lt;br&gt;2. TIS replies SOCKS5 No Auth Required (&lt;b&gt;0x05 0x00&lt;/b&gt;) back over TCP via MTCMS.&lt;br&gt;3. Client sends SOCKS5 CONNECT Request (&lt;b&gt;0x05 0x01 ... Target Host &amp;amp; Port&lt;/b&gt;).&lt;br&gt;4. TIS connects to Target Internet Server &amp;amp; sends SOCKS Success (&lt;b&gt;0x05 0x00 0x00 ...&lt;/b&gt;).&lt;br&gt;5. TIS spawns async target reader loop to continuously stream response data via MTCMS.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#a855f7;strokeWidth=1.5;fontColor=#e2e8f0;fontSize=11;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="1140" width="540" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- Server Web Config Box -->
+        <mxCell id="s_web" value="&lt;b&gt;Server Web Config Dashboard &amp;amp; REST Server (asymmetric_server/web_config)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#818cf8&quot;&gt;Flask API &amp;amp; Web UI (127.0.0.1:5001) for modifying server_config.json&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1b4b;strokeColor=#818cf8;strokeWidth=2;fontColor=#f8fafc;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="1320" width="540" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Server Config Info Box -->
+        <mxCell id="s_info" value="&lt;b&gt;SERVER CONTROLS &amp;amp; LAUNCHERS&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#94a3b8&quot;&gt;• &lt;b&gt;scripts/run_server.bat / scripts/run_server.sh&lt;/b&gt;: Launches Remote Server Proxy (server_main.py).&lt;br&gt;• &lt;b&gt;scripts/run_server_config_web.sh&lt;/b&gt;: Launches Server Web Config Dashboard.&lt;br&gt;• &lt;b&gt;server_config.json&lt;/b&gt;: Sets bind_udp_port (9090) and bind_tcp_ports (2525-2530).&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#334155;strokeColor=#94a3b8;strokeWidth=1;fontColor=#ffffff;fontSize=11;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="1420" width="540" height="90" as="geometry" />
+        </mxCell>
+
+
+        <!-- ========================================================================================= -->
+        <!-- PROPERLY SPACED, NON-OVERLAPPING FLOW ARROWS WITH DISTINCT X-OFFSETS & SOLID LABELS -->
+        <!-- ========================================================================================= -->
+
+        <!-- Flow 1: Local App -> TCMC (Left Lane Downward: exitX=0.25, entryX=0.25) -->
+        <mxCell id="flow_1" value="1. Local SOCKS5 Request (127.0.0.1:1080)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1.0;entryX=0.25;entryY=0.0;strokeColor=#38bdf8;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#38bdf8;" edge="1" parent="1" source="c_app" target="c_tcmc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 14: TCMC -> Local App (Right Lane Upward: exitX=0.75, entryX=0.75) -->
+        <mxCell id="flow_14" value="14. Deliver Data Back to Local App / Browser" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0.0;entryX=0.75;entryY=1.0;strokeColor=#38bdf8;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#38bdf8;" edge="1" parent="1" source="c_tcmc" target="c_app">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 2: TCMC -> TIF (Left Lane Downward: exitX=0.25, entryX=0.25) -->
+        <mxCell id="flow_2" value="2. Register Session &amp;amp; Assign Session ID" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1.0;entryX=0.25;entryY=0.0;strokeColor=#f59e0b;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#f59e0b;" edge="1" parent="1" source="c_tcmc" target="c_tif">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 13: TIF -> TCMC (Right Lane Upward: exitX=0.75, entryX=0.75) -->
+        <mxCell id="flow_13" value="13. Write Response Payload to Client Socket" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0.0;entryX=0.75;entryY=1.0;strokeColor=#38bdf8;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#38bdf8;" edge="1" parent="1" source="c_tif" target="c_tcmc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 3: TIF -> UCMC (Left Lane Downward: exitX=0.25, entryX=0.25) -->
+        <mxCell id="flow_3" value="3. Pass Request Data + Session ID" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1.0;entryX=0.25;entryY=0.0;strokeColor=#f59e0b;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#f59e0b;" edge="1" parent="1" source="c_tif" target="c_ucmc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 4: UCMC -> Network Outbound UDP (Horizontal Right) -->
+        <mxCell id="flow_4" value="4. Transmit Outbound UDP Binary Frame" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.5;strokeColor=#f59e0b;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#f59e0b;" edge="1" parent="1" source="c_ucmc" target="net_udp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 5: Network Outbound UDP -> Server UCMS (Horizontal Right) -->
+        <mxCell id="flow_5" value="5. Receive UDP Packet (Port 9090)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.5;strokeColor=#f59e0b;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#f59e0b;" edge="1" parent="1" source="net_udp" target="s_ucms">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 6: Server UCMS -> Server TIS (Left Lane Upward: exitX=0.25, entryX=0.25) -->
+        <mxCell id="flow_6" value="6. Unpack Binary Header &amp;amp; Forward Payload to TIS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=0.0;entryX=0.25;entryY=1.0;strokeColor=#c084fc;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#c084fc;" edge="1" parent="1" source="s_ucms" target="s_tis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 7: Server TIS -> Target Internet (Left Lane Upward: exitX=0.25, entryX=0.25) -->
+        <mxCell id="flow_7" value="7. SOCKS5 CONNECT / Connect Target Internet Socket" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=0.0;entryX=0.25;entryY=1.0;strokeColor=#a855f7;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#a855f7;" edge="1" parent="1" source="s_tis" target="s_target">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 8: Target Internet -> Server TIS (Right Lane Downward: exitX=0.75, entryX=0.75) -->
+        <mxCell id="flow_8" value="8. Target Internet Server Response Data Stream" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1.0;entryX=0.75;entryY=0.0;strokeColor=#10b981;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#10b981;" edge="1" parent="1" source="s_target" target="s_tis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 9: Server TIS -> Server MTCMS (Clean Right-Margin Loop) -->
+        <mxCell id="flow_9" value="9. Pass Response Payload to MTCMS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1.0;exitY=0.5;entryX=1.0;entryY=0.5;strokeColor=#10b981;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#10b981;" edge="1" parent="1" source="s_tis" target="s_mtcms">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2200" y="410" />
+              <mxPoint x="2200" y="1040" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Flow 10: Client MTCM -> Network Inbound TCP (Horizontal Right) -->
+        <mxCell id="flow_10" value="10. Connect Return TCP Channels (Ports 2525 - 2530)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.5;strokeColor=#10b981;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#10b981;" edge="1" parent="1" source="c_mtcm" target="net_tcp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 11: Network Inbound TCP -> Server MTCMS (Horizontal Right) -->
+        <mxCell id="flow_11" value="11. Connects to Server MTCMS Multi-Port Listener" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1.0;exitY=0.5;entryX=0.0;entryY=0.5;strokeColor=#10b981;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#10b981;" edge="1" parent="1" source="net_tcp" target="s_mtcms">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Flow 12: Client MTCM -> Client TIF (Clean Far-Left Margin Loop) -->
+        <mxCell id="flow_12" value="12. Unpack Frame &amp;amp; Lookup Session ID in TIF" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.0;exitY=0.5;entryX=0.0;entryY=0.5;strokeColor=#38bdf8;strokeWidth=2.5;fontColor=#ffffff;fontSize=11;fontStyle=1;labelBackgroundColor=#0f172a;labelBorderColor=#38bdf8;" edge="1" parent="1" source="c_mtcm" target="c_tif">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="20" y="1040" />
+              <mxPoint x="20" y="615" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

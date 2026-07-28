@@ -1,0 +1,6 @@
+{
+  "name": "Asymmetric Proxy Client",
+  "description": "Local asynchronous asymmetric network proxy in Python (UDP outbound / TCP inbound) with 5G optimizations, session management, and interactive Web Control Panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
