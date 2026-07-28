@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Asymmetric Python Proxy Client</title>
+  <title>Asymmetric Proxy Client Network Monitor & Control Dashboard</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -14,6 +14,8 @@
       --accent-udp: #f59e0b;
       --accent-tcp: #10b981;
       --cyan: #06b6d4;
+      --rose: #f43f5e;
+      --success: #10b981;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -23,7 +25,7 @@
       padding: 24px;
       line-height: 1.5;
     }
-    .container { max-width: 1000px; margin: 0 auto; }
+    .container { max-width: 1100px; margin: 0 auto; }
     header {
       margin-bottom: 20px;
       padding-bottom: 16px;
@@ -44,7 +46,7 @@
       font-family: monospace;
     }
 
-    .nav-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; }
     .tab-btn {
       background: transparent;
       color: var(--text-dim);
@@ -55,7 +57,7 @@
       font-weight: 600;
       font-size: 13px;
     }
-    .tab-btn.active { background: var(--card-bg); color: #fff; border-color: var(--border); }
+    .tab-btn.active { background: var(--card-bg); color: var(--cyan); border-color: var(--border); }
 
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .card {
@@ -63,12 +65,13 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 16px;
+      margin-bottom: 20px;
     }
     .card-title { font-size: 11px; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; font-family: monospace; }
     .card-value { font-size: 24px; font-weight: 700; font-family: monospace; margin: 8px 0; }
     .card-sub { font-size: 12px; color: var(--text-dim); }
     
-    .actions { display: flex; gap: 12px; margin-bottom: 24px; }
+    .actions { display: flex; gap: 12px; margin-bottom: 20px; }
     button {
       background: #2563eb;
       color: white;
@@ -84,40 +87,49 @@
     button.secondary { background: #334155; }
     button.secondary:hover { background: #475569; }
 
-    .logs-panel {
+    .log-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .log-box {
       background: #020617;
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 10px;
       overflow: hidden;
-      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
     }
-    .logs-header {
+    .log-header {
       background: #0f172a;
-      padding: 12px 16px;
+      padding: 10px 14px;
       font-weight: 600;
-      font-size: 13px;
+      font-size: 12px;
+      color: var(--text-dim);
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    pre#logConsole {
-      padding: 16px;
+    pre.log-viewer {
+      padding: 12px;
       font-family: monospace;
-      font-size: 12px;
-      height: 320px;
+      font-size: 11px;
+      height: 300px;
       overflow-y: auto;
       white-space: pre-wrap;
       color: #cbd5e1;
+      background: #020617;
     }
 
-    /* Config Editor Form */
-    .config-panel { display: none; }
-    .config-panel.active { display: block; }
+    /* Form Styles */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; font-family: monospace; }
-    input, select {
+    input, select, textarea {
       background: #0f172a;
       border: 1px solid var(--border);
       color: var(--text);
@@ -127,30 +139,48 @@
       font-family: monospace;
       outline: none;
     }
-    input:focus, select:focus { border-color: var(--cyan); }
+    input:focus, select:focus, textarea:focus { border-color: var(--cyan); }
     .help-text { font-size: 11px; color: #64748b; }
     .status-msg { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 13px; display: none; }
     .status-msg.success { background: rgba(16, 185, 129, 0.2); border: 1px solid var(--accent-tcp); color: #34d399; }
     .status-msg.error { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #fca5a5; }
+
+    .route-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .route-option input[type="radio"] { margin-top: 3px; accent-color: var(--cyan); width: 16px; height: 16px; }
+    .status-pill { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
+    .pill-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .pill-inactive { background: rgba(244, 63, 94, 0.2); color: #fca5a5; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <div>
-        <h1>Asymmetric Python Proxy Client</h1>
-        <div class="subtitle">UDP Outbound (Port 9090) • TCP Multi-Port Inbound (2525-2530) • Local Proxy (127.0.0.1:1080)</div>
+        <h1>Asymmetric Python Proxy Dashboard</h1>
+        <div class="subtitle">UDP Outbound (Port 9090) • TCP Multi-Port Return (2525-2530) • Local Ingress (127.0.0.1:1080)</div>
       </div>
       <div class="badge" id="statusBadge">Engine Running</div>
     </header>
 
     <div class="nav-tabs">
-      <button class="tab-btn active" id="btnTabDashboard" onclick="switchTab('dashboard')">Live Metrics & Logs</button>
-      <button class="tab-btn" id="btnTabConfig" onclick="switchTab('config')">Edit config.json (Flask / REST API)</button>
+      <button class="tab-btn active" id="btnDashboard" onclick="switchTab('dashboard')">Live Metrics</button>
+      <button class="tab-btn" id="btnMonitor" onclick="switchTab('monitor')">Live Network Monitor</button>
+      <button class="tab-btn" id="btnConfig" onclick="switchTab('config')">Settings (config.json)</button>
+      <button class="tab-btn" id="btnEnabler" onclick="switchTab('enabler')">System Proxy Enabler</button>
     </div>
 
-    <!-- TAB 1: DASHBOARD -->
-    <div id="tabDashboard">
+    <!-- TAB 1: DASHBOARD METRICS -->
+    <div id="tabDashboard" class="tab-panel active">
       <div class="actions">
         <button onclick="sendTestBurst()">Simulate 5G Packet Burst</button>
         <button class="secondary" onclick="restartProxy()">Restart Python Core</button>
@@ -179,19 +209,80 @@
         </div>
       </div>
 
-      <div class="logs-panel">
-        <div class="logs-header">
+      <div class="log-box">
+        <div class="log-header">
           <span>Python Process Logs (asymmetric_proxy/main.py)</span>
           <button class="secondary" style="padding: 4px 10px; font-size: 11px;" onclick="clearLogs()">Clear Console</button>
         </div>
-        <pre id="logConsole">Connecting to python proxy backend...</pre>
+        <pre id="logConsole" class="log-viewer" style="height: 320px;">Connecting to python proxy backend...</pre>
       </div>
     </div>
 
-    <!-- TAB 2: CONFIGURATION EDITOR -->
-    <div id="tabConfig" class="config-panel">
-      <div class="card" style="margin-bottom: 20px;">
-        <div class="card-title" style="margin-bottom: 12px; color: var(--cyan);">Edit Proxy Parameters (config.json)</div>
+    <!-- TAB 2: LIVE NETWORK MONITOR -->
+    <div id="tabMonitor" class="tab-panel">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">Port Range Control & Live Stream Logging</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>MTCM Return Port Start</label>
+            <input type="number" id="quick_port_start" value="2525">
+          </div>
+          <div class="form-group">
+            <label>MTCM Return Port End</label>
+            <input type="number" id="quick_port_end" value="2530">
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <div style="display: flex; gap: 20px; align-items: center; margin-top: 6px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff; font-size: 13px;">
+                <input type="checkbox" id="quick_write_full" onchange="toggleQuickLoggers()">
+                Enable Raw Socket Bytes Logging (received_packets_full.txt)
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff; font-size: 13px;">
+                <input type="checkbox" id="quick_write_data" onchange="toggleQuickLoggers()">
+                Enable Unpacked Payload Data Logging (received_packets_data.txt)
+              </label>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px;">
+          <button class="secondary" onclick="clearLogFiles()">Clear Packet Files</button>
+          <button onclick="applyPortRange()">Update Port Range & Apply</button>
+        </div>
+      </div>
+
+      <div class="log-grid">
+        <!-- Text Place 1: Received Packets Live -->
+        <div class="log-box">
+          <div class="log-header">
+            <span style="color: var(--cyan);">1. Received Packets (Live Raw Socket Chunks)</span>
+            <span id="badgeFullLog" class="status-pill pill-inactive">Logging OFF</span>
+          </div>
+          <pre id="viewerFullLog" class="log-viewer">Loading raw socket packet logs...</pre>
+        </div>
+
+        <!-- Text Place 2: Unpacked Unobfuscated Packets Data Live -->
+        <div class="log-box">
+          <div class="log-header">
+            <span style="color: var(--success);">2. Unpacked Unobfuscated Packets Data (Live)</span>
+            <span id="badgeDataLog" class="status-pill pill-inactive">Logging OFF</span>
+          </div>
+          <pre id="viewerDataLog" class="log-viewer">Loading unpacked payload logs...</pre>
+        </div>
+      </div>
+
+      <div class="log-box">
+        <div class="log-header">
+          <span style="color: var(--accent-udp);">3. MTCM Client Port Range Connection Events (Open / Close)</span>
+          <span class="status-pill pill-active">Auto-Logged</span>
+        </div>
+        <pre id="viewerEventsLog" class="log-viewer" style="height: 180px;">Loading MTCM connection events...</pre>
+      </div>
+    </div>
+
+    <!-- TAB 3: CONFIGURATION EDITOR -->
+    <div id="tabConfig" class="tab-panel">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">Edit Proxy Parameters (config.json)</div>
         <form id="cfgForm" onsubmit="saveConfiguration(event)">
           <div class="form-grid">
             <div class="form-group">
@@ -221,12 +312,10 @@
             <div class="form-group">
               <label>Max MTCM Active Sockets</label>
               <input type="number" id="cfg_max_mtcm_connections" required>
-              <span class="help-text">Max allowed MTCM TCP sockets</span>
             </div>
             <div class="form-group">
               <label>Socket Idle Timeout (s)</label>
               <input type="number" id="cfg_socket_timeout" required>
-              <span class="help-text">Read timeout before socket cleanup</span>
             </div>
             <div class="form-group">
               <label>Socket Buffer Size (Bytes)</label>
@@ -241,6 +330,16 @@
                 <option value="ERROR">ERROR</option>
               </select>
             </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff;">
+                <input type="checkbox" id="cfg_write_full"> Log Raw Received Packets (received_packets_full.txt)
+              </label>
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff;">
+                <input type="checkbox" id="cfg_write_data"> Log Unpacked Payload Data (received_packets_data.txt)
+              </label>
+            </div>
           </div>
           <div style="display: flex; gap: 12px; margin-top: 16px;">
             <button type="submit">Save config.json</button>
@@ -250,9 +349,49 @@
         </form>
       </div>
     </div>
+
+    <!-- TAB 4: SYSTEM PROXY ENABLER -->
+    <div id="tabEnabler" class="tab-panel">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">System Proxy & Routing Mode Controller</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+          <div>
+            <div id="enablerText" style="font-size: 16px; font-weight: 700; color: #fff;">-</div>
+            <div style="font-size: 12px; color: var(--text-dim);">Target Local Proxy: 127.0.0.1:1080</div>
+          </div>
+          <button id="enablerBtn" onclick="toggleEnabler()">Toggle Proxy ON/OFF</button>
+        </div>
+
+        <div class="card-title" style="margin-bottom: 12px;">Select Routing Scope</div>
+        <label class="route-option">
+          <input type="radio" name="ui_route_mode" value="http_https" id="rad_http_https" onchange="setEnablerRoute('http_https')">
+          <div>
+            <div style="font-weight: 600; color: #fff;">HTTP & HTTPS Only</div>
+            <div style="font-size: 12px; color: var(--text-dim);">Routes browser web requests through proxy.</div>
+          </div>
+        </label>
+        <label class="route-option">
+          <input type="radio" name="ui_route_mode" value="http_https_tcp_udp" id="rad_http_https_tcp_udp" onchange="setEnablerRoute('http_https_tcp_udp')">
+          <div>
+            <div style="font-weight: 600; color: #fff;">HTTP, HTTPS + TCP & UDP (SOCKS5)</div>
+            <div style="font-size: 12px; color: var(--text-dim);">Routes web browser and application TCP/UDP socket traffic through local proxy.</div>
+          </div>
+        </label>
+        <label class="route-option">
+          <input type="radio" name="ui_route_mode" value="all_dns" id="rad_all_dns" onchange="setEnablerRoute('all_dns')">
+          <div>
+            <div style="font-weight: 600; color: #fff;">Route Everything from PC (including DNS)</div>
+            <div style="font-size: 12px; color: var(--text-dim);">Directs all PC networking traffic and remote DNS resolution through SOCKS5.</div>
+          </div>
+        </label>
+      </div>
+    </div>
   </div>
 
   <script>
+    let currentConfigData = {};
+    let enablerState = {};
+
     function formatBytes(bytes) {
       if (!bytes) return '0 B';
       const k = 1024;
@@ -262,18 +401,22 @@
     }
 
     function switchTab(tabName) {
-      if (tabName === 'dashboard') {
-        document.getElementById('tabDashboard').style.display = 'block';
-        document.getElementById('tabConfig').classList.remove('active');
-        document.getElementById('btnTabDashboard').classList.add('active');
-        document.getElementById('btnTabConfig').classList.remove('active');
-      } else {
-        document.getElementById('tabDashboard').style.display = 'none';
-        document.getElementById('tabConfig').classList.add('active');
-        document.getElementById('btnTabDashboard').classList.remove('active');
-        document.getElementById('btnTabConfig').classList.add('active');
-        loadConfig();
-      }
+      const tabs = ['dashboard', 'monitor', 'config', 'enabler'];
+      tabs.forEach(t => {
+        const pane = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+        const btn = document.getElementById('btn' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (t === tabName) {
+          pane.classList.add('active');
+          btn.classList.add('active');
+        } else {
+          pane.classList.remove('active');
+          btn.classList.remove('active');
+        }
+      });
+
+      if (tabName === 'config') loadConfig();
+      if (tabName === 'enabler') fetchEnablerState();
+      if (tabName === 'monitor') fetchMonitorData();
     }
 
     async function updateDashboard() {
@@ -307,21 +450,112 @@
       try {
         const res = await fetch('/api/config');
         if (res.ok) {
-          const cfg = await res.json();
-          document.getElementById('cfg_local_host').value = cfg.local_host || '127.0.0.1';
-          document.getElementById('cfg_local_port').value = cfg.local_port || 1080;
-          document.getElementById('cfg_remote_proxy_host').value = cfg.remote_proxy_host || '127.0.0.1';
-          document.getElementById('cfg_remote_udp_port').value = cfg.remote_udp_port || 9090;
-          document.getElementById('cfg_mtcm_port_start').value = cfg.mtcm_port_start || 2525;
-          document.getElementById('cfg_mtcm_port_end').value = cfg.mtcm_port_end || 2530;
-          document.getElementById('cfg_max_mtcm_connections').value = cfg.max_mtcm_connections || 100;
-          document.getElementById('cfg_socket_timeout').value = cfg.socket_timeout || 30;
-          document.getElementById('cfg_socket_buffer_size').value = cfg.socket_buffer_size || 1048576;
-          document.getElementById('cfg_log_level').value = cfg.log_level || 'DEBUG';
+          currentConfigData = await res.json();
+          document.getElementById('cfg_local_host').value = currentConfigData.local_host || '127.0.0.1';
+          document.getElementById('cfg_local_port').value = currentConfigData.local_port || 1080;
+          document.getElementById('cfg_remote_proxy_host').value = currentConfigData.remote_proxy_host || '127.0.0.1';
+          document.getElementById('cfg_remote_udp_port').value = currentConfigData.remote_udp_port || 9090;
+          document.getElementById('cfg_mtcm_port_start').value = currentConfigData.mtcm_port_start || 2525;
+          document.getElementById('cfg_mtcm_port_end').value = currentConfigData.mtcm_port_end || 2530;
+          document.getElementById('cfg_max_mtcm_connections').value = currentConfigData.max_mtcm_connections || 100;
+          document.getElementById('cfg_socket_timeout').value = currentConfigData.socket_timeout || 30;
+          document.getElementById('cfg_socket_buffer_size').value = currentConfigData.socket_buffer_size || 1048576;
+          document.getElementById('cfg_log_level').value = currentConfigData.log_level || 'DEBUG';
+          document.getElementById('cfg_write_full').checked = !!currentConfigData.write_received_packets_full;
+          document.getElementById('cfg_write_data').checked = !!currentConfigData.write_received_packets_data;
+
+          document.getElementById('quick_port_start').value = currentConfigData.mtcm_port_start || 2525;
+          document.getElementById('quick_port_end').value = currentConfigData.mtcm_port_end || 2530;
+          document.getElementById('quick_write_full').checked = !!currentConfigData.write_received_packets_full;
+          document.getElementById('quick_write_data').checked = !!currentConfigData.write_received_packets_data;
+
+          updateMonitorBadges();
         }
       } catch (err) {
         console.error('Error loading config:', err);
       }
+    }
+
+    function updateMonitorBadges() {
+      const fullBadge = document.getElementById('badgeFullLog');
+      const dataBadge = document.getElementById('badgeDataLog');
+
+      if (currentConfigData.write_received_packets_full) {
+        fullBadge.className = 'status-pill pill-active';
+        fullBadge.textContent = 'Logging ON';
+      } else {
+        fullBadge.className = 'status-pill pill-inactive';
+        fullBadge.textContent = 'Logging OFF';
+      }
+
+      if (currentConfigData.write_received_packets_data) {
+        dataBadge.className = 'status-pill pill-active';
+        dataBadge.textContent = 'Logging ON';
+      } else {
+        dataBadge.className = 'status-pill pill-inactive';
+        dataBadge.textContent = 'Logging OFF';
+      }
+    }
+
+    async function toggleQuickLoggers() {
+      currentConfigData.write_received_packets_full = document.getElementById('quick_write_full').checked;
+      currentConfigData.write_received_packets_data = document.getElementById('quick_write_data').checked;
+
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentConfigData)
+      });
+      updateMonitorBadges();
+    }
+
+    async function applyPortRange() {
+      const pStart = parseInt(document.getElementById('quick_port_start').value, 10);
+      const pEnd = parseInt(document.getElementById('quick_port_end').value, 10);
+
+      const res = await fetch('/api/proxy/toggle-ports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mtcm_port_start: pStart, mtcm_port_end: pEnd })
+      });
+      if (res.ok) {
+        alert('Port range updated successfully!');
+        loadConfig();
+      }
+    }
+
+    async function fetchMonitorData() {
+      try {
+        const [resFull, resData, resEvts] = await Promise.all([
+          fetch('/api/logs/full'),
+          fetch('/api/logs/data'),
+          fetch('/api/logs/events')
+        ]);
+
+        if (resFull.ok) {
+          const d = await resFull.json();
+          const el = document.getElementById('viewerFullLog');
+          el.textContent = d.content || '(No raw packets logged yet)';
+          el.scrollTop = el.scrollHeight;
+        }
+        if (resData.ok) {
+          const d = await resData.json();
+          const el = document.getElementById('viewerDataLog');
+          el.textContent = d.content || '(No unpacked data logged yet)';
+          el.scrollTop = el.scrollHeight;
+        }
+        if (resEvts.ok) {
+          const d = await resEvts.json();
+          const el = document.getElementById('viewerEventsLog');
+          el.textContent = d.content || '(No connection events logged yet)';
+          el.scrollTop = el.scrollHeight;
+        }
+      } catch (e) {}
+    }
+
+    async function clearLogFiles() {
+      await fetch('/api/logs/clear', { method: 'POST' });
+      fetchMonitorData();
     }
 
     async function saveConfiguration(e) {
@@ -336,7 +570,9 @@
         max_mtcm_connections: parseInt(document.getElementById('cfg_max_mtcm_connections').value, 10),
         socket_timeout: parseInt(document.getElementById('cfg_socket_timeout').value, 10),
         socket_buffer_size: parseInt(document.getElementById('cfg_socket_buffer_size').value, 10),
-        log_level: document.getElementById('cfg_log_level').value
+        log_level: document.getElementById('cfg_log_level').value,
+        write_received_packets_full: document.getElementById('cfg_write_full').checked,
+        write_received_packets_data: document.getElementById('cfg_write_data').checked
       };
 
       const msgEl = document.getElementById('cfgStatusMsg');
@@ -363,6 +599,62 @@
       }
     }
 
+    async function fetchEnablerState() {
+      try {
+        const res = await fetch('/api/proxy-enabler/status');
+        if (res.ok) {
+          enablerState = await res.json();
+          renderEnablerUI();
+        }
+      } catch (e) {}
+    }
+
+    function renderEnablerUI() {
+      const txt = document.getElementById('enablerText');
+      const btn = document.getElementById('enablerBtn');
+
+      if (enablerState.enabled) {
+        txt.textContent = 'System Proxy is ENABLED (ON)';
+        txt.style.color = '#34d399';
+        btn.textContent = 'Turn Proxy OFF';
+        btn.style.background = '#f43f5e';
+      } else {
+        txt.textContent = 'System Proxy is DISABLED (OFF)';
+        txt.style.color = '#fca5a5';
+        btn.textContent = 'Turn Proxy ON';
+        btn.style.background = '#10b981';
+      }
+
+      const rad = document.getElementById('rad_' + (enablerState.route_mode || 'http_https_tcp_udp'));
+      if (rad) rad.checked = true;
+    }
+
+    async function toggleEnabler() {
+      const res = await fetch('/api/proxy-enabler/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !enablerState.enabled })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        enablerState = data.state;
+        renderEnablerUI();
+      }
+    }
+
+    async function setEnablerRoute(mode) {
+      const res = await fetch('/api/proxy-enabler/route-option', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ route_mode: mode })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        enablerState = data.state;
+        renderEnablerUI();
+      }
+    }
+
     async function sendTestBurst() {
       await fetch('/api/proxy/test-packet', { method: 'POST' });
       updateDashboard();
@@ -377,7 +669,9 @@
       document.getElementById('logConsole').textContent = '';
     }
 
+    loadConfig();
     setInterval(updateDashboard, 1500);
+    setInterval(fetchMonitorData, 2000);
     updateDashboard();
   </script>
 </body>

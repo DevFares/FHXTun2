@@ -12,17 +12,17 @@ echo.
 
 where py >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
-    echo [INFO] Python launcher 'py' detected. Launching web config server...
+    echo [INFO] Python launcher 'py' detected. Launching proxy monitor server...
     echo.
-    py web_config_server.py
+    py proxy_monitor/app.py
     goto end
 )
 
 where python >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
-    echo [INFO] Python executable 'python' detected. Launching web config server...
+    echo [INFO] Python executable 'python' detected. Launching proxy monitor server...
     echo.
-    python web_config_server.py
+    python proxy_monitor/app.py
     goto end
 )
 

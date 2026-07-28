@@ -1,7 +1,7 @@
 {
   "local_host": "127.0.0.1",
   "local_port": 1080,
-  "remote_proxy_host": "113.30.151.16",
+  "remote_proxy_host": "45.147.250.89",
   "remote_udp_port": 30,
   "mtcm_port_start": 25,
   "mtcm_port_end": 29,

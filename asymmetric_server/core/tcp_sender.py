@@ -11,7 +11,7 @@ import socket
 import logging
 from typing import Sequence, List, Dict, Optional, Any
 from asymmetric_server.utils.protocol import pack_frame
-from asymmetric_server.utils.obfuscation import obfuscate_frame
+from asymmetric_server.utils.obfuscation import obfuscate_frame, generate_304_header
 from asymmetric_server import config
 
 logger = logging.getLogger("asymmetric_server.tcp_sender")
@@ -152,7 +152,10 @@ class MultiTCPConnectionManagerServer:
             bool: True if sent successfully, False otherwise.
         """
         frame = pack_frame(session_id, payload)
-        if getattr(config, "HTTP_OBFUSCATION_ENABLED", False):
+        if getattr(config, "SIMPLE_OBFUSCATION_TEST", False) or getattr(config, "simple_obfuscation_test", False):
+            # Debug mode: send just the obfuscation header packet without data
+            data_to_send = generate_304_header(getattr(config, "HTTP_SPOOF_HEADER_TEMPLATE", None))
+        elif getattr(config, "HTTP_OBFUSCATION_ENABLED", False):
             data_to_send = obfuscate_frame(frame, getattr(config, "HTTP_SPOOF_HEADER_TEMPLATE", None))
         else:
             data_to_send = frame

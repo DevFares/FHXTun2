@@ -19,4 +19,6 @@ tests/
 *.pyd
 *.bat
 *.env.example
-
+*.txt
+.gitignore
+index.html

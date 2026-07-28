@@ -135,12 +135,119 @@ app.post('/api/config', (req, res) => {
   }
 });
 
-app.post('/api/proxy/restart', (req, res) => {
-  if (proxyProcess) proxyProcess.kill('SIGTERM');
-  setTimeout(() => {
-    startProxyProcess();
-    res.json({ success: true, message: 'Restarted Python proxy process.' });
-  }, 1000);
+app.post('/api/proxy/toggle-ports', (req, res) => {
+  try {
+    const { mtcm_port_start, mtcm_port_end } = req.body;
+    if (fs.existsSync(configPath)) {
+      const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      if (mtcm_port_start !== undefined) cfg.mtcm_port_start = Number(mtcm_port_start);
+      if (mtcm_port_end !== undefined) cfg.mtcm_port_end = Number(mtcm_port_end);
+      fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2), 'utf8');
+      appendLog(`[PORTS] Updated MTCM port range: ${cfg.mtcm_port_start} - ${cfg.mtcm_port_end}`);
+      res.json({ success: true, config: cfg });
+    } else {
+      res.status(404).json({ error: 'config.json not found' });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Packet Logging APIs
+const logsDir = path.join(process.cwd(), 'logs');
+
+app.get('/api/logs/full', (req, res) => {
+  const p = path.join(logsDir, 'received_packets_full.txt');
+  if (fs.existsSync(p)) {
+    try {
+      const content = fs.readFileSync(p, 'utf8');
+      const lines = content.split('\n');
+      res.json({ content: lines.slice(-200).join('\n') });
+    } catch (e: any) {
+      res.json({ content: `Error reading log: ${e.message}` });
+    }
+  } else {
+    res.json({ content: 'No raw socket packets recorded yet. (Check if write_received_packets_full is enabled in config.json)' });
+  }
+});
+
+app.get('/api/logs/data', (req, res) => {
+  const p = path.join(logsDir, 'received_packets_data.txt');
+  if (fs.existsSync(p)) {
+    try {
+      const content = fs.readFileSync(p, 'utf8');
+      const lines = content.split('\n');
+      res.json({ content: lines.slice(-200).join('\n') });
+    } catch (e: any) {
+      res.json({ content: `Error reading log: ${e.message}` });
+    }
+  } else {
+    res.json({ content: 'No unpacked payload data recorded yet. (Check if write_received_packets_data is enabled in config.json)' });
+  }
+});
+
+app.get('/api/logs/events', (req, res) => {
+  const p = path.join(logsDir, 'mtcm_connection_events.txt');
+  if (fs.existsSync(p)) {
+    try {
+      const content = fs.readFileSync(p, 'utf8');
+      const lines = content.split('\n');
+      res.json({ content: lines.slice(-200).join('\n') });
+    } catch (e: any) {
+      res.json({ content: `Error reading log: ${e.message}` });
+    }
+  } else {
+    res.json({ content: 'No MTCM connection events recorded yet.' });
+  }
+});
+
+app.post('/api/logs/clear', (req, res) => {
+  ['received_packets_full.txt', 'received_packets_data.txt', 'mtcm_connection_events.txt'].forEach(f => {
+    const p = path.join(logsDir, f);
+    if (fs.existsSync(p)) {
+      try { fs.writeFileSync(p, '', 'utf8'); } catch (e) {}
+    }
+  });
+  res.json({ success: true });
+});
+
+// Proxy Enabler Integration
+const enablerStateFile = path.join(process.cwd(), 'proxy_enabler', 'proxy_enabler_state.json');
+
+app.get('/api/proxy-enabler/status', (req, res) => {
+  if (fs.existsSync(enablerStateFile)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(enablerStateFile, 'utf8'));
+      return res.json(data);
+    } catch (e) {}
+  }
+  res.json({ enabled: false, route_mode: 'http_https_tcp_udp', proxy_host: '127.0.0.1', proxy_port: 1080 });
+});
+
+app.post('/api/proxy-enabler/toggle', (req, res) => {
+  let state = { enabled: false, route_mode: 'http_https_tcp_udp', proxy_host: '127.0.0.1', proxy_port: 1080 };
+  if (fs.existsSync(enablerStateFile)) {
+    try { state = { ...state, ...JSON.parse(fs.readFileSync(enablerStateFile, 'utf8')) }; } catch (e) {}
+  }
+  state.enabled = req.body.enabled !== undefined ? Boolean(req.body.enabled) : !state.enabled;
+  try {
+    fs.mkdirSync(path.dirname(enablerStateFile), { recursive: true });
+    fs.writeFileSync(enablerStateFile, JSON.stringify(state, null, 2), 'utf8');
+  } catch (e) {}
+  res.json({ success: true, state });
+});
+
+app.post('/api/proxy-enabler/route-option', (req, res) => {
+  let state = { enabled: false, route_mode: 'http_https_tcp_udp', proxy_host: '127.0.0.1', proxy_port: 1080 };
+  if (fs.existsSync(enablerStateFile)) {
+    try { state = { ...state, ...JSON.parse(fs.readFileSync(enablerStateFile, 'utf8')) }; } catch (e) {}
+  }
+  if (req.body.route_mode) state.route_mode = req.body.route_mode;
+  try {
+    fs.mkdirSync(path.dirname(enablerStateFile), { recursive: true });
+    fs.writeFileSync(enablerStateFile, JSON.stringify(state, null, 2), 'utf8');
+  } catch (e) {}
+  res.json({ success: true, state });
 });
 
 app.post('/api/proxy/test-packet', (req, res) => {

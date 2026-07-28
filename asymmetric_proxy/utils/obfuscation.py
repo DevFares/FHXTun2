@@ -37,9 +37,9 @@ DEFAULT_304_HEADER_TEMPLATE = (
     "Cache-Control: public, max-age=0\r\n"
     "Vary: Origin\r\n"
     "Content-Type: image/png\r\n"
-    "\r\n"
-)
+    "\r\n" 
 
+xszc)
 
 def generate_304_header(template: str = None) -> bytes:
     """Generates a spoofing HTTP response header with dynamic fields."""

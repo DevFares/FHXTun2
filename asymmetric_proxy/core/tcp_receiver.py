@@ -94,6 +94,7 @@ class MultiTCPConnectionManager:
 
                 self._active_writers.add(writer)
                 logger.info(f"[MTCM] Connected TCP return channel demand to Remote Proxy {self.remote_host}:{port}")
+                packet_logger.log_connection_event("OPEN", port, self.remote_host, "TCP stream connected successfully")
 
                 await self._read_stream(reader, writer, port)
 
@@ -172,6 +173,9 @@ class MultiTCPConnectionManager:
                         payload = bytes(buffer[HEADER_SIZE:total_frame_len])
                         del buffer[:total_frame_len]
 
+                        if getattr(config, "WRITE_RECEIVED_PACKETS_DATA", False):
+                            packet_logger.log_data_packet(session_id, payload)
+
                         self._bytes_received += payload_len
                         self._packets_received += 1
 
@@ -203,6 +207,7 @@ class MultiTCPConnectionManager:
         except Exception as exc:
             logger.error(f"[MTCM] Error reading return stream on port {port}: {exc}")
         finally:
+            packet_logger.log_connection_event("CLOSE", port, self.remote_host, "TCP stream closed or disconnected")
             self._active_writers.discard(writer)
             try:
                 if not writer.is_closing():

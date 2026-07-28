@@ -8,7 +8,7 @@ TARGET_DIR="FHXTun"
 echo "==============================================================="
 echo "   FHXTun - Clone & Start Asymmetric Proxy Server"
 echo "==============================================================="
-apt install git  python3 -y
+apt install git  python3 nano screen -y
 if [ -d "$TARGET_DIR" ]; then
     echo "[+] Directory '$TARGET_DIR' already exists."
     cd "$TARGET_DIR" || exit 1
