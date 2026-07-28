@@ -42,7 +42,7 @@ DEFAULT_304_HEADER_TEMPLATE = (
 DEFAULT_CONFIG: Dict[str, Any] = {
     "local_host": "127.0.0.1",
     "local_port": 1080,
-    "remote_proxy_host": "113.30.151.16",
+    "remote_proxy_host": "127.0.0.1",
     "remote_udp_port": 30,
     "mtcm_port_start": 25,
     "mtcm_port_end": 29,
@@ -52,6 +52,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "chunk_read_size": 65536,
     "http_obfuscation_enabled": True,
     "http_spoof_header_template": DEFAULT_304_HEADER_TEMPLATE,
+    "write_received_packets_full": True,
+    "write_received_packets_data": True,
     "log_level": "DEBUG",
 }
 
@@ -111,6 +113,9 @@ MAX_UDP_PAYLOAD_SIZE: int = int(_cfg.get("max_udp_payload_size", 1350))
 
 HTTP_OBFUSCATION_ENABLED: bool = bool(_cfg.get("http_obfuscation_enabled", False))
 HTTP_SPOOF_HEADER_TEMPLATE: str = str(_cfg.get("http_spoof_header_template", DEFAULT_304_HEADER_TEMPLATE))
+
+WRITE_RECEIVED_PACKETS_FULL: bool = bool(_cfg.get("write_received_packets_full", False))
+WRITE_RECEIVED_PACKETS_DATA: bool = bool(_cfg.get("write_received_packets_data", False))
 
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", _cfg.get("log_level", "DEBUG"))
 LOG_FORMAT: str = "%(asctime)s [%(levelname)s] [%(name)s] %(message)s"

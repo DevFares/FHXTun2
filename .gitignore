@@ -5,4 +5,18 @@ coverage/
 .DS_Store
 *.log
 .env*
+!.env.example
+*.pyc
+*.json
+asymmetric_proxy/
+scripts/
+tests/
+*.drawio
+*.md
+*.html
+*.ts
+*.zip
+*.pyd
+*.bat
+*.env.example
 

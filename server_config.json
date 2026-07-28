@@ -9,6 +9,6 @@
   "socket_buffer_size": 1048576,
   "chunk_read_size": 65536,
   "log_level": "DEBUG",
-  "http_obfuscation_enabled": false,
+  "http_obfuscation_enabled": true,
   "http_spoof_header_template": "HTTP/1.1 304 Not Modified\r\nDate: {date}\r\nConnection: Keep-Alive\r\nKeep-Alive: timeout=360000, max=360000\r\nETag: {etag}\r\nCache-Control: public, max-age=0\r\nVary: Origin\r\nNb: {headernb}\r\nContent-Type: image/png\r\n\r\n"
 }

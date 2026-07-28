@@ -13,6 +13,7 @@ from typing import Sequence, List, Set, Optional
 from asymmetric_proxy.core.session_manager import TrafficIdentifierFunction
 from asymmetric_proxy.utils.protocol import unpack_header, HEADER_SIZE
 from asymmetric_proxy.utils.obfuscation import deobfuscate_stream
+from asymmetric_proxy.utils.packet_logger import packet_logger
 from asymmetric_proxy import config
 
 logger = logging.getLogger("asymmetric_proxy.tcp_receiver")
@@ -116,6 +117,9 @@ class MultiTCPConnectionManager:
                     logger.debug(f"[MTCM] Remote Proxy {self.remote_host}:{port} closed TCP return stream.")
                     break
 
+                if getattr(config, "WRITE_RECEIVED_PACKETS_FULL", False):
+                    packet_logger.log_full_packet(port, chunk)
+
                 buffer.extend(chunk)
 
                 # Frame decoding loop
@@ -127,6 +131,9 @@ class MultiTCPConnectionManager:
                         if not frames:
                             break
                         for session_id, payload in frames:
+                            if getattr(config, "WRITE_RECEIVED_PACKETS_DATA", False):
+                                packet_logger.log_data_packet(session_id, payload)
+
                             payload_len = len(payload)
                             self._bytes_received += payload_len
                             self._packets_received += 1
