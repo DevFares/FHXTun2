@@ -43,16 +43,16 @@ DEFAULT_304_HEADER_TEMPLATE = (
 # Default configuration dictionary for Server Proxy
 DEFAULT_SERVER_CONFIG: Dict[str, Any] = {
     "bind_udp_host": "0.0.0.0",
-    "bind_udp_port": 9090,
+    "bind_udp_port": 30,
     "bind_tcp_host": "0.0.0.0",
-    "bind_tcp_port_start": 2525,
-    "bind_tcp_port_end": 2530,
+    "bind_tcp_port_start": 25,
+    "bind_tcp_port_end": 29,
     "max_active_sessions": 65535,
     "socket_timeout": 30,
     "socket_buffer_size": 1048576,
     "chunk_read_size": 65536,
-    "http_obfuscation_enabled": False,
-    "simple_obfuscation_test": False,
+    "http_obfuscation_enabled": True,
+    "simple_obfuscation_test": True,
     "http_spoof_header_template": DEFAULT_304_HEADER_TEMPLATE,
     "log_level": "DEBUG",
 }
