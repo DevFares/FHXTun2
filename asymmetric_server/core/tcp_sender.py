@@ -152,11 +152,16 @@ class MultiTCPConnectionManagerServer:
             bool: True if sent successfully, False otherwise.
         """
         frame = pack_frame(session_id, payload)
-        if getattr(config, "SIMPLE_OBFUSCATION_TEST", False) or getattr(config, "simple_obfuscation_test", False):
-            # Debug mode: send just the obfuscation header packet without data
-            data_to_send = generate_304_header(getattr(config, "HTTP_SPOOF_HEADER_TEMPLATE", None))
-        elif getattr(config, "HTTP_OBFUSCATION_ENABLED", False):
-            data_to_send = obfuscate_frame(frame, getattr(config, "HTTP_SPOOF_HEADER_TEMPLATE", None))
+        is_obfuscated = (
+            getattr(config, "HTTP_OBFUSCATION_ENABLED", False)
+            or getattr(config, "SIMPLE_OBFUSCATION_TEST", False)
+            or config.load_server_config_file().get("http_obfuscation_enabled", False)
+            or config.load_server_config_file().get("simple_obfuscation_test", False)
+        )
+        template = getattr(config, "HTTP_SPOOF_HEADER_TEMPLATE", None) or config.load_server_config_file().get("http_spoof_header_template", None)
+
+        if is_obfuscated:
+            data_to_send = obfuscate_frame(frame, template)
         else:
             data_to_send = frame
 
