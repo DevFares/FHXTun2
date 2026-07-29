@@ -43,7 +43,7 @@ DEFAULT_SERVER_CONFIG: Dict[str, Any] = {
     "socket_timeout": 30,
     "socket_buffer_size": 1048576,
     "chunk_read_size": 65536,
-    "http_obfuscation_enabled": False,
+    "http_obfuscation_enabled": True,
     "simple_obfuscation_test": False,
     "http_spoof_header_template": DEFAULT_200_HEADER_TEMPLATE,
     "log_level": "DEBUG",
