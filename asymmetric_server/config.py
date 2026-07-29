@@ -16,29 +16,21 @@ SERVER_CONFIG_FILE_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "server_config.json")
 )
 
-BACKUP_304_HEADER_TEMPLATE = (
-    "HTTP/1.1 304 Not Modified\r\n"
-    "Date: {date}\r\n"
-    "Connection: Keep-Alive\r\n"
-    "Keep-Alive: timeout=360000, max=360000\r\n"
-    "ETag: {etag}\r\n"
-    "Cache-Control: public, max-age=0\r\n"
-    "Vary: Origin\r\n"
-    "Nb: {headernb}\r\n"
-    "Content-Type: image/png\r\n"
+DEFAULT_200_HEADER_TEMPLATE = (
+    "HTTP/1.1 200 OK\r\n"
+    "accept-ranges: bytes\r\n"
+    "connection: Keep-Alive\r\n"
+    "content-length: {content_length}\r\n"
+    "content-type: text/html; charset=UTF-8\r\n"
+    "date: {date}\r\n"
+    'etag: "2ce-625e02018439f"\r\n'
+    "keep-alive: timeout=5, max=100\r\n"
+    "last-modified: Fri, 01 Nov 2024 20:53:21 GMT\r\n"
+    "strict-transport-security: max-age=0\r\n"
     "\r\n"
 )
 
-DEFAULT_304_HEADER_TEMPLATE = (
-    "HTTP/1.1 304 Not Modified\r\n"
-    "Connection: Keep-Alive\r\n"
-    "Keep-Alive: timeout=360000, max=360000\r\n"
-    "ETag: {etag}\r\n"
-    "Cache-Control: public, max-age=0\r\n"
-    "Vary: Origin\r\n"
-    "Content-Type: image/png\r\n"
-    "\r\n"
-)
+DEFAULT_304_HEADER_TEMPLATE = DEFAULT_200_HEADER_TEMPLATE
 
 # Default configuration dictionary for Server Proxy
 DEFAULT_SERVER_CONFIG: Dict[str, Any] = {
@@ -51,9 +43,9 @@ DEFAULT_SERVER_CONFIG: Dict[str, Any] = {
     "socket_timeout": 30,
     "socket_buffer_size": 1048576,
     "chunk_read_size": 65536,
-    "http_obfuscation_enabled": True,
+    "http_obfuscation_enabled": False,
     "simple_obfuscation_test": False,
-    "http_spoof_header_template": DEFAULT_304_HEADER_TEMPLATE,
+    "http_spoof_header_template": DEFAULT_200_HEADER_TEMPLATE,
     "log_level": "DEBUG",
 }
 
@@ -118,7 +110,7 @@ CHUNK_READ_SIZE: int = int(_cfg.get("chunk_read_size", 65536))
 
 HTTP_OBFUSCATION_ENABLED: bool = bool(_cfg.get("http_obfuscation_enabled", False))
 SIMPLE_OBFUSCATION_TEST: bool = bool(_cfg.get("simple_obfuscation_test", False))
-HTTP_SPOOF_HEADER_TEMPLATE: str = str(_cfg.get("http_spoof_header_template", DEFAULT_304_HEADER_TEMPLATE))
+HTTP_SPOOF_HEADER_TEMPLATE: str = str(_cfg.get("http_spoof_header_template", DEFAULT_200_HEADER_TEMPLATE))
 
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", _cfg.get("log_level", "DEBUG"))
 LOG_FORMAT: str = "%(asctime)s [%(levelname)s] [%(name)s] %(message)s"
